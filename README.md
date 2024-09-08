@@ -23,8 +23,8 @@ AI Video Transcriber is a Streamlit-based web application that allows users to u
 
 1. Clone this repository:
    ```
-   git clone https://github.com/yourusername/ai-video-transcriber.git
-   cd ai-video-transcriber
+   git clone https://github.com/zsevall/Upschool-AI.git
+   cd Upschool-AI
    ```
 
 2. Install the required packages:
