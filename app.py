@@ -120,7 +120,7 @@ def show_landing_page():
     
     components.html("""
         <div class="video-container">
-            <iframe width="560" height="315" src="https://www.youtube.com/embed/J65XkTx744M" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+            <iframe width="560" height="315" src="https://www.youtube.com/embed/-tM4ouirmCU" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </div>
     """, height=350)
        
