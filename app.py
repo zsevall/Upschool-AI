@@ -25,14 +25,14 @@ if 'translations' not in st.session_state:
     st.session_state.translations = {}
 if 'show_app' not in st.session_state:
     st.session_state.show_app = False
+if 'duration' not in st.session_state:
+    st.session_state.duration = 0
 
-# Function to load and encode images
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
-# Function to set background image
 def set_background(png_file):
     bin_str = get_base64_of_bin_file(png_file)
     page_bg_img = '''
@@ -45,7 +45,6 @@ def set_background(png_file):
     ''' % bin_str
     st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# CSS for animations
 def local_css(file_name):
     with open(file_name, "r") as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
@@ -75,11 +74,11 @@ def convert_video_to_audio(uploaded_file):
         try:
             with VideoFileClip(temp_video_path) as video:
                 video.audio.write_audiofile(temp_audio.name)
-                duration = video.duration
-            return temp_audio.name, duration
+                st.session_state.duration = video.duration  # Store duration in session state
+            return temp_audio.name
         except Exception as e:
             st.error(f"Error processing video: {str(e)}")
-            return None, 0
+            return None
         finally:
             os.unlink(temp_video_path)
 
@@ -109,6 +108,25 @@ def translate_text(text, target_language):
     except Exception as e:
         st.error(f"Error translating text: {str(e)}")
         return None
+
+def text_to_srt(text, duration):
+    lines = text.split('. ')
+    srt_content = ""
+    start_time = 0
+    for i, line in enumerate(lines, 1):
+        end_time = min(start_time + 5, duration)  # Assume each sentence takes 5 seconds or until video ends
+        srt_content += f"{i}\n"
+        srt_content += f"{format_time(start_time)} --> {format_time(end_time)}\n"
+        srt_content += f"{line}.\n\n"
+        start_time = end_time
+    return srt_content
+
+def format_time(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = int(seconds % 60)
+    milliseconds = int((seconds % 1) * 1000)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
 def show_landing_page():
     st.markdown("""
@@ -154,10 +172,10 @@ def main():
         return
 
     # Set background image
-    set_background('background.png')  # Make sure to have a background.png file in your project directory
+    set_background('background.png')
 
     # Load custom CSS
-    local_css("style.css")  # Make sure to create a style.css file with the provided CSS
+    local_css("style.css")  
 
     show_landing_page()
 
@@ -183,7 +201,7 @@ def main():
                 if st.button("Process Video") and rate_limit():
                     with st.spinner("Processing video..."):
                         # Convert video to audio
-                        audio_file, duration = convert_video_to_audio(uploaded_file)
+                        audio_file = convert_video_to_audio(uploaded_file)
                         if audio_file:
                             # Transcribe audio
                             st.session_state.transcript = transcribe_audio(audio_file)
@@ -202,11 +220,12 @@ def main():
             st.subheader("Original Transcript")
             st.write(st.session_state.transcript)
 
-            # Provide download option for transcript
+            # Provide download option for transcript in SRT format
+            srt_transcript = text_to_srt(st.session_state.transcript, st.session_state.duration)
             st.download_button(
-                label="Download Transcript",
-                data=st.session_state.transcript,
-                file_name="transcript.txt",
+                label="Download Transcript (SRT)",
+                data=srt_transcript,
+                file_name="transcript.srt",
                 mime="text/plain"
             )
 
@@ -215,11 +234,12 @@ def main():
                 st.subheader(f"{lang} Translation")
                 st.write(translation)
 
-                # Provide download option
+                # Provide download option in SRT format
+                srt_translation = text_to_srt(translation, st.session_state.duration)
                 st.download_button(
-                    label=f"Download {lang} Translation",
-                    data=translation,
-                    file_name=f"{sanitize_input(lang.lower())}_translation.txt",
+                    label=f"Download {lang} Translation (SRT)",
+                    data=srt_translation,
+                    file_name=f"{sanitize_input(lang.lower())}_translation.srt",
                     mime="text/plain"
                 )
 
